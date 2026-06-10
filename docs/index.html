@@ -1310,23 +1310,16 @@ const Particles = {
     }
   },
 
-  draw(ctx, camX) {
+  draw(ctx) {
     for (const p of state.particles) {
-      const screenX = p.x - camX;
       ctx.globalAlpha = p.life;
       ctx.fillStyle = p.color;
       if (p.type === 'confetti') {
-        ctx.fillRect(screenX - p.size/2, p.y - p.size/2, p.size * 0.7, p.size * 0.4);
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size * 0.7, p.size * 0.4);
       } else {
-        // sparkle: star shape
         ctx.beginPath();
-        ctx.arc(screenX, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
         ctx.fill();
-        // glow
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8;
-        ctx.fill();
-        ctx.shadowBlur = 0;
       }
     }
     ctx.globalAlpha = 1;
@@ -1386,10 +1379,9 @@ function handleAnswer(selected) {
     state.correctCount++;
     AudioSys.play('correct');
     document.getElementById('result-icon').textContent = '✅ ถูกต้อง!';
-    // พลุ
-    const canvas = state.canvas;
-    Particles.add(canvas.width / 2, canvas.height / 3, 25);
-    Particles.addConfetti(canvas.width / 2, canvas.height / 3);
+    // พลุ (viewport coordinates, logical 960×540 space)
+    Particles.add(state.canvasW / 2, state.canvasH / 3, 25);
+    Particles.addConfetti(state.canvasW / 2, state.canvasH / 3);
   } else {
     btns[selected].classList.add('wrong');
     btns[q.correct].classList.add('correct');
@@ -1431,10 +1423,10 @@ function goGameOver() {
 function goVictory() {
   state.phase = 'victory';
   AudioSys.play('victory');
-  Particles.addConfetti(state.canvas.width / 2, 100);
+  Particles.addConfetti(state.canvasW / 2, 100);
   for (let i = 0; i < 5; i++) {
     setTimeout(() => {
-      Particles.addConfetti(state.canvas.width / 2, 100);
+      Particles.addConfetti(state.canvasW / 2, 100);
     }, i * 300);
   }
   document.getElementById('victory-score').textContent = state.score;
@@ -1479,10 +1471,14 @@ function updateHUD() {
 // ============================================================
 function render() {
   const ctx = state.ctx;
-  const cw = state.canvasW;
-  const ch = state.canvasH;
+  const cw = state.canvasW;  // 960 (logical)
+  const ch = state.canvasH;  // 540 (logical)
   const cam = state.camera;
   const p = state.player;
+
+  // ---- Scale: 960×540 logical → เต็ม container (portrait/landscape) ----
+  ctx.save();
+  ctx.scale(state.scaleX, state.scaleY);
 
   // ---- Clear ----
   ctx.clearRect(0, 0, cw, ch);
@@ -1661,8 +1657,10 @@ function render() {
     Draw.player(ctx, { x: p.x - cam.x, y: p.y, w: p.w, h: p.h, onGround: p.onGround, vy: p.vy, walkFrame: p.walkFrame, facing: p.facing }, state.avatarEmoji);
   }
 
-  // ---- Particles ----
-  Particles.draw(ctx, cam.x);
+  // ---- Particles (viewport coordinates — inside scaled context) ----
+  Particles.draw(ctx);
+
+  ctx.restore(); // end scale
 }
 
 // ============================================================
@@ -1769,51 +1767,40 @@ function setupMobileControls() {
 
 // ============================================================
 // 13. CANVAS RESIZE
-// ============================================================
 function resizeCanvas() {
   const container = document.getElementById('game-container');
   const canvas = state.canvas;
   if (!container || !canvas) return;
+
   const rect = container.getBoundingClientRect();
 
-  // Logical resolution (game world)
+  // Logical resolution (game world — landscape coordinate space)
   state.canvasW = 960;
   state.canvasH = 540;
 
-  // Set canvas pixel buffer to logical size (CSS handles display scaling)
-  canvas.width = state.canvasW;
-  canvas.height = state.canvasH;
-
-  // คำนวณ display size ให้คงสัดส่วน 16:9 ไม่บิดเบี้ยว
-  const gameRatio = state.canvasW / state.canvasH; // 16/9
-  const containerRatio = rect.width / rect.height;
-
-  let displayW, displayH;
-  if (containerRatio > gameRatio) {
-    // Container กว้างกว่า → จอแนวนอน → เต็มความสูง
-    displayH = rect.height;
-    displayW = displayH * gameRatio;
-  } else {
-    // Container สูงกว่า → จอแนวตั้ง → เต็มความกว้าง
-    displayW = rect.width;
-    displayH = displayW / gameRatio;
-  }
-
-  // จัดกึ่งกลาง canvas ใน container เพื่อคงสัดส่วน
-  canvas.style.width = displayW + 'px';
-  canvas.style.height = displayH + 'px';
+  // Canvas pixel buffer fills container exactly (no aspect-ratio lock)
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
   canvas.style.position = 'absolute';
-  canvas.style.left = ((rect.width - displayW) / 2) + 'px';
-  canvas.style.top = ((rect.height - displayH) / 2) + 'px';
+  canvas.style.left = '0';
+  canvas.style.top = '0';
 
-  // เก็บ scale สำหรับคำนวณ touch/mouse coordinates
-  state.displayScale = state.canvasW / displayW;
+  // Scale factor: maps 960×540 logical space → actual canvas pixels
+  state.scaleX = canvas.width / state.canvasW;
+  state.scaleY = canvas.height / state.canvasH;
 
-  // ปรับ particles canvas ให้เต็ม container (ไม่เปลี่ยนสัดส่วน)
+  // Input conversion: screen coords → logical coords
+  state.inputScaleX = rect.width / state.canvasW;
+  state.inputScaleY = rect.height / state.canvasH;
+
+  // Particles canvas — same pixel dimensions, fills container
   const pCanvas = state.pCanvas;
   if (pCanvas) {
-    pCanvas.width = rect.width;
-    pCanvas.height = rect.height;
+    pCanvas.width = canvas.width;
+    pCanvas.height = canvas.height;
     pCanvas.style.width = rect.width + 'px';
     pCanvas.style.height = rect.height + 'px';
   }
