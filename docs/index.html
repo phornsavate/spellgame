@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ผจญภัยหุบเขาสะกดคำ — Thai Spelling Adventure</title>
+<script src="https://cdn.tailwindcss.com">
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & BASE ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: 'Mali', cursive;
+  background: #1a1a2e;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ========== GAME WRAPPER ========== */
+#game-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#game-container {
+  position: relative;
+  width: min(100vw, calc(100vh * 16/9));
+  height: min(100vh, calc(100vw * 9/16));
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 40px rgba(255,165,0,0.3);
+}
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #87CEEB;
+}
+
+/* ========== HUD (หัวใจ, คะแนน, ฯลฯ) ========== */
+#hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+}
+#hud-avatar { font-size: 24px; line-height: 1; }
+#hud-name { color: #fff; font-size: 14px; font-weight: 600; min-width: 60px; }
+#hud-hearts { font-size: 20px; line-height: 1; display: flex; gap: 2px; }
+#hud-score { color: #FFD700; font-size: 14px; font-weight: 600; margin-left: auto; white-space: nowrap; }
+#hud-progress-wrap {
+  position: absolute;
+  bottom: -18px; left: 14px; right: 14px;
+  height: 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+#hud-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FFD700, #FF8C00);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+/* ========== OVERLAY SCREENS (Tailwind-styled) ========== */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+}
+.overlay-card {
+  background: linear-gradient(135deg, #FFF8E1, #FFECB3);
+  border-radius: 24px;
+  padding: 32px 36px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  border: 3px solid #FFB300;
+}
+.overlay-card h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #E65100;
+  margin-bottom: 8px;
+}
+.overlay-card h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #BF360C;
+  margin-bottom: 12px;
+}
+.overlay-card p {
+  color: #5D4037;
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+/* ========== AVATAR SELECTOR ========== */
+.avatar-grid {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.avatar-btn {
+  font-size: 32px;
+  width: 52px; height: 52px;
+  border: 4px solid transparent;
+  border-radius: 50%;
+  background: #FFFDE7;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-btn:hover { transform: scale(1.1); }
+.avatar-btn.selected { border-color: #FF6F00; background: #FFE082; transform: scale(1.12); box-shadow: 0 0 12px rgba(255,111,0,0.5); }
+
+/* ========== INPUT ========== */
+.input-field {
+  width: 100%;
+  padding: 10px 16px;
+  border: 3px solid #FFB74D;
+  border-radius: 12px;
+  font-family: 'Mali', cursive;
+  font-size: 16px;
+  text-align: center;
+  outline: none;
+  background: #FFFDE7;
+  color: #3E2723;
+}
+.input-field:focus { border-color: #FF6F00; box-shadow: 0 0 8px rgba(255,111,0,0.3); }
+
+/* ========== BUTTONS ========== */
+.btn-primary {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 16px;
+  font-family: 'Mali', cursive;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #FF8A65, #FF6F00);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(255,111,0,0.4);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,111,0,0.5); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  padding: 10px 28px;
+  border: 3px solid #FF6F00;
+  border-radius: 14px;
+  font-family: 'Mali', cursive;
+  font-size: 16px;
+  font-weight: 600;
+  color: #FF6F00;
+  background: #FFF8E1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { background: #FFE082; }
+
+/* ========== QUESTION MODAL ========== */
+#question-overlay {
+  display: none;
+  z-index: 40;
+}
+#question-overlay.show { display: flex; }
+.option-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  margin: 6px 0;
+  border: 3px solid #FFB74D;
+  border-radius: 12px;
+  background: #FFFDE7;
+  font-family: 'Mali', cursive;
+  font-size: 16px;
+  color: #3E2723;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.option-btn:hover { background: #FFE082; border-color: #FF6F00; }
+.option-btn.correct { background: #C8E6C9; border-color: #4CAF50; color: #1B5E20; }
+.option-btn.wrong { background: #FFCDD2; border-color: #F44336; color: #B71C1C; animation: shake 0.4s; }
+.option-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+#explanation-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #FFF8E1;
+  border: 2px solid #FFB300;
+  display: none;
+  font-size: 14px;
+  color: #4E342E;
+}
+#explanation-box.show { display: block; }
+#result-icon { font-size: 48px; margin: 8px 0; }
+
+/* ========== MOBILE CONTROLS ========== */
+#mobile-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: none;
+  z-index: 30;
+  justify-content: space-between;
+  padding: 0 16px;
+  pointer-events: none;
+}
+#mobile-controls.show { display: flex; }
+.mctrl-group {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+.mctrl-btn {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.mctrl-btn:active { background: rgba(255,255,255,0.4); transform: scale(0.92); }
+.mctrl-btn.jump-btn {
+  width: 72px; height: 72px;
+  font-size: 20px;
+  font-weight: 700;
+  background: rgba(255,152,0,0.3);
+  border-color: rgba(255,152,0,0.6);
+}
+
+/* ========== PARTICLES (พลุตอบถูก) ========== */
+#particles-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 35;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .overlay-card { padding: 24px 20px; max-width: 360px; }
+  .overlay-card h1 { font-size: 22px; }
+  .overlay-card h2 { font-size: 18px; }
+  #hud { padding: 6px 10px; gap: 8px; }
+  #hud-name { font-size: 12px; min-width: 40px; }
+  #hud-hearts { font-size: 16px; }
+  #hud-score { font-size: 12px; }
+  .mctrl-btn { width: 48px; height: 48px; font-size: 20px; }
+  .mctrl-btn.jump-btn { width: 60px; height: 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== START SCREEN ==================== -->
+<div id="start-overlay" class="overlay">
+  <div class="overlay-card">
+    <h1>🍄 ผจญภัยหุบเขาสะกดคำ</h1>
+    <p style="color:#E65100;font-size:14px;">Thai Spelling Adventure</p>
+    <div style="width:60px;height:3px;background:#FFB300;margin:8px auto;border-radius:2px;"></div>
+
+    <!-- ชื่อผู้เล่น -->
+    <label style="display:block;text-align:left;font-weight:600;color:#5D4037;font-size:14px;margin-bottom:4px;">ชื่อของเรา</label>
+    <input id="player-name-input" class="input-field" type="text" placeholder="พิมพ์ชื่อที่นี่..." maxlength="12" autocomplete="off">
+
+    <!-- เลือก Avatar -->
+    <label style="display:block;text-align:left;font-weight:600;color:#5D4037;font-size:14px;margin-top:14px;margin-bottom:4px;">เลือก Avatar</label>
+    <div class="avatar-grid" id="avatar-grid">
+      <button class="avatar-btn" data-emoji="🤠">🤠</button>
+      <button class="avatar-btn selected" data-emoji="👷">👷</button>
+      <button class="avatar-btn" data-emoji="🦸">🦸</button>
+      <button class="avatar-btn" data-emoji="🧙">🧙</button>
+      <button class="avatar-btn" data-emoji="🎅">🎅</button>
+      <button class="avatar-btn" data-emoji="🐱">🐱</button>
+    </div>
+    <p id="start-error" style="color:#D32F2F;font-size:12px;display:none;">กรุณากรอกชื่อก่อนเริ่มเล่น</p>
+
+    <button id="start-btn" class="btn-primary" style="margin-top:10px;width:100%;">▶ เริ่มผจญภัย</button>
+    <p style="color:#8D6E63;font-size:11px;margin-top:8px;">ใช้ WASD / ลูกศร / ←→↑ เพื่อเดิน<br>เก็บเห็ด🍄เพื่อตอบคำถามภาษาไทย</p>
+  </div>
+</div>
+
+<!-- ==================== GAME WRAPPER ==================== -->
+<div id="game-wrapper" style="display:none;">
+  <div id="game-container">
+
+    <!-- CANVAS -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- PARTICLES (พลุ) -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <span id="hud-avatar">👷</span>
+      <span id="hud-name">ผู้เล่น</span>
+      <span id="hud-hearts">❤️❤️❤️</span>
+      <span id="hud-score">⭐ 0</span>
+      <div id="hud-progress-wrap">
+        <div id="hud-progress-fill" style="width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- QUESTION MODAL -->
+    <div id="question-overlay" class="overlay">
+      <div class="overlay-card" style="max-width:460px;">
+        <div style="font-size:14px;color:#8D6E63;margin-bottom:4px;">🍄 คำถามข้อที่ <span id="q-number">1</span>/20</div>
+        <div id="q-text" style="font-size:18px;font-weight:600;color:#3E2723;margin-bottom:12px;min-height:48px;"></div>
+        <div id="q-options"></div>
+        <div id="result-icon"></div>
+        <div id="explanation-box"></div>
+        <button id="q-continue-btn" class="btn-primary" style="width:100%;margin-top:12px;display:none;">➜ ต่อไป</button>
+      </div>
+    </div>
+
+    <!-- MOBILE CONTROLS -->
+    <div id="mobile-controls">
+      <div class="mctrl-group">
+        <button class="mctrl-btn" id="m-left">◀</button>
+        <button class="mctrl-btn" id="m-right">▶</button>
+      </div>
+      <div class="mctrl-group">
+        <button class="mctrl-btn jump-btn" id="m-jump">⬆<br><span style="font-size:10px;">กระโดด</span></button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== GAME OVER SCREEN ==================== -->
+<div id="gameover-overlay" class="overlay" style="display:none;">
+  <div class="overlay-card">
+    <div style="font-size:64px;margin-bottom:8px;">😢</div>
+    <h2>Game Over</h2>
+    <p>หมดหัวใจแล้วนะ… ไม่เป็นไร ลองใหม่ได้!</p>
+    <div id="gameover-stats" style="margin:12px 0;padding:10px;background:#FFF8E1;border-radius:12px;">
+      <p>⭐ คะแนน: <span id="gameover-score">0</span></p>
+      <p>🍄 ตอบถูก: <span id="gameover-correct">0</span> / 20 ข้อ</p>
+    </div>
+    <button id="retry-btn" class="btn-primary">🔄 ลองอีกครั้ง</button>
+  </div>
+</div>
+
+<!-- ==================== VICTORY SCREEN ==================== -->
+<div id="victory-overlay" class="overlay" style="display:none;">
+  <div class="overlay-card">
+    <div style="font-size:64px;margin-bottom:8px;">🏆</div>
+    <h2>ยินดีด้วย!</h2>
+    <p>เดินถึงเส้นชัยแล้ว! 🎉</p>
+    <div id="victory-stats" style="margin:12px 0;padding:10px;background:#FFF8E1;border-radius:12px;">
+      <p>⭐ คะแนน: <span id="victory-score">0</span></p>
+      <p>🍄 ตอบถูก: <span id="victory-correct">0</span> / 20 ข้อ</p>
+    </div>
+    <button id="playagain-btn" class="btn-primary">🔄 เล่นอีกครั้ง</button>
+  </div>
+</div>
+
+<!-- ==================== JAVASCRIPT — GAME ENGINE ==================== -->
+<script>
+/* ==========================================================
+   🎮 ผจญภัยหุบเขาสะกดคำ — เกมภาษาไทยแนว Platformer
+   เทคโนโลยี: Canvas 2D API, Web Audio API, Touch Events
+   -----------------------------------------------------------
+   โครงสร้าง:
+     - Audio System: Web Audio API (Oscillator)
+     - Question Data: 20 ข้อ
+     - Game State: player, platforms, mushrooms, camera, etc.
+     - Physics: gravity, collision, jump
+     - Rendering: parallax backgrounds, characters, UI
+     - Game Loop: requestAnimationFrame
+   ========================================================== */
+
+// ============================================================
+// 1. CONFIGURATION
+// ============================================================
+const CONFIG = {
+  // Game world
+  WORLD_WIDTH: 5600,
+  GROUND_Y: 490,          // y-position of ground surface
+  GROUND_HEIGHT: 40,
+  TILE: 32,
+  GRAVITY: 0.55,
+  JUMP_VEL: -10.5,
+  MOVE_SPEED: 4.5,
+  MAX_FALL: 12,
+  PLAYER_W: 28,
+  PLAYER_H: 42,
+
+  // Camera
+  CAM_LERP: 0.08,
+
+  // Question mushrooms
+  MUSHROOM_W: 30,
+  MUSHROOM_H: 36,
+  TOTAL_QUESTIONS: 20,
+};
+
+// ============================================================
+// 2. AUDIO SYSTEM (Web Audio API — สังเคราะห์เสียง)
+// ============================================================
+const AudioSys = {
+  ctx: null,
+
+  init() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  },
+
+  /** เล่นเสียงสังเคราะห์แบบสั้น */
+  play(type) {
+    if (!this.ctx) this.init();
+    try {
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      if (type === 'jump') this._jump();
+      else if (type === 'correct') this._correct();
+      else if (type === 'wrong') this._wrong();
+      else if (type === 'fall') this._fall();
+      else if (type === 'victory') this._victory();
+    } catch(e) { /* ignore audio errors */ }
+  },
+
+  _jump() {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(400, this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.12);
+    g.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(); o.stop(this.ctx.currentTime + 0.15);
+  },
+
+  _correct() {
+    const notes = [523, 659, 784];
+    notes.forEach((freq, i) => {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine';
+      const t = this.ctx.currentTime + i * 0.1;
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.13, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      o.connect(g).connect(this.ctx.destination);
+      o.start(t); o.stop(t + 0.2);
+    });
+  },
+
+  _wrong() {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(200, this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.3);
+    g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(); o.stop(this.ctx.currentTime + 0.35);
+  },
+
+  _fall() {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(300, this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.4);
+    g.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.45);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(); o.stop(this.ctx.currentTime + 0.45);
+  },
+
+  _victory() {
+    const melody = [523, 659, 784, 1047];
+    melody.forEach((freq, i) => {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sine';
+      const t = this.ctx.currentTime + i * 0.15;
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.12, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      o.connect(g).connect(this.ctx.destination);
+      o.start(t); o.stop(t + 0.25);
+    });
+  }
+};
+
+// ============================================================
+// 3. QUESTIONS — 20 ข้อ (ภาษาไทย ป.1)
+// ============================================================
+const QUESTIONS = [
+  // ---- ข้อ 1 ----
+  {
+    q: 'คำว่า "กอด" (กอ-ออ-ดอ) ตัวสะกดคือตัวอะไร',
+    opts: ['ก (ไก่)', 'ด (เด็ก)', 'อ (อ่าง)'],
+    correct: 1,
+    explain: 'กอดสะกดว่า กอ-ออ-ดอ เสียงตัวสะกดคือ ด ดังนั้นตัวสะกดคือ "ด" (ด เด็ก) อยู่ในมาตราแม่กด'
+  },
+  // ---- ข้อ 2 ----
+  {
+    q: 'คำว่า "เรียน" มีสระอะไรประสมอยู่',
+    opts: ['สระเอีย', 'สระเออ', 'สระเอา'],
+    correct: 0,
+    explain: 'เรียนสะกดว่า รอ-เอีย-นอ มีสระเอียประสมอยู่ และ น (หนู) เป็นตัวสะกด'
+  },
+  // ---- ข้อ 3 ----
+  {
+    q: 'คำว่า "ปลา" มีกี่พยางค์',
+    opts: ['1 พยางค์', '2 พยางค์', '3 พยางค์'],
+    correct: 0,
+    explain: '"ปลา" อ่านว่า "ปลา" พยางค์เดียว (ไม่อ่านว่า ปละ-ลา)'
+  },
+  // ---- ข้อ 4 ----
+  {
+    q: 'คำในข้อใดอยู่ในมาตราแม่กน',
+    opts: ['จาน', 'ปาก', 'เด็ก'],
+    correct: 0,
+    explain: '"จาน" มีตัว น (หนู) เป็นตัวสะกด อยู่ในมาตราแม่กน ส่วน "ปาก" กับ "เด็ก" อยู่ในมาตราแม่กก'
+  },
+  // ---- ข้อ 5 ----
+  {
+    q: '"ต้นไม้" มีเครื่องหมายวรรณยุกต์อะไรกำกับอยู่',
+    opts: ['ไม้เอก', 'ไม้โท', 'ไม้ตรี'],
+    correct: 1,
+    explain: 'ทั้งคำว่า "ต้น" และ "ไม้" มีไม้โท (ไม้จัตวา) กำกับ: ต้-น ไม้โท, ม้า-ไม้ ไม้โท'
+  },
+  // ---- ข้อ 6 ----
+  {
+    q: 'คำว่า "สัตว์" (สะ-วัด) ประสมด้วยสระอะไร',
+    opts: ['สระอะ', 'สระอา', 'สระอิ'],
+    correct: 0,
+    explain: '"สัตว์" อ่านว่า "สัตว์" มีสระอะ (ไม้หันอากาศ) ประสม: ส-ะ-ต-ว-์'
+  },
+  // ---- ข้อ 7 ----
+  {
+    q: 'คำว่า "แมว" มีสระอะไร',
+    opts: ['สระแอ', 'สระเอ', 'สระโอ'],
+    correct: 0,
+    explain: '"แมว" สะกดว่า มอ-แอ-วอ มีสระแอประสมอยู่'
+  },
+  // ---- ข้อ 8 ----
+  {
+    q: '"เก้าอี้" มีกี่พยางค์',
+    opts: ['1 พยางค์', '2 พยางค์', '3 พยางค์'],
+    correct: 1,
+    explain: '"เก้าอี้" อ่านว่า เก้า-อี้ มี 2 พยางค์'
+  },
+  // ---- ข้อ 9 ----
+  {
+    q: 'คำว่า "วัด" ตัวสะกดอยู่ในมาตราใด',
+    opts: ['แม่กด', 'แม่กน', 'แม่กบ'],
+    correct: 0,
+    explain: '"วัด" มีตัว ด (เด็ก) เป็นตัวสะกด อยู่ในมาตราแม่กด'
+  },
+  // ---- ข้อ 10 ----
+  {
+    q: 'คำว่า "บิน" ตัวสะกดคือตัวอะไร',
+    opts: ['น (หนู)', 'บ (ใบไม้)', 'ก (ไก่)'],
+    correct: 0,
+    explain: '"บิน" สะกดว่า บอ-อิ-นอ มีตัว น (หนู) เป็นตัวสะกด อยู่ในมาตราแม่กน'
+  },
+  // ---- ข้อ 11 ----
+  {
+    q: 'คำว่า "ดอกไม้" ประกอบด้วยคำอะไรบ้าง',
+    opts: ['ดอ + กไม้', 'ดอก + ไม้', 'โด + กไม้'],
+    correct: 1,
+    explain: '"ดอกไม้" เป็นคำประสม มาจากคำว่า "ดอก" + "ไม้" รวมกัน'
+  },
+  // ---- ข้อ 12 ----
+  {
+    q: 'คำว่า "สะพาน" มีกี่พยางค์',
+    opts: ['1 พยางค์', '2 พยางค์', '3 พยางค์'],
+    correct: 1,
+    explain: '"สะพาน" อ่านว่า สะ-พาน มี 2 พยางค์'
+  },
+  // ---- ข้อ 13 ----
+  {
+    q: 'คำว่า "ไก่" ประสมด้วยสระอะไร',
+    opts: ['สระไอ (ไม้มลาย)', 'สระใอ (ไม้ม้วน)', 'สระเอ'],
+    correct: 0,
+    explain: '"ไก่" สะกดว่า ไอ-ก่ มีสระไอ (ไม้มลาย) ประสมอยู่'
+  },
+  // ---- ข้อ 14 ----
+  {
+    q: 'คำในข้อใดอยู่ในมาตราแม่กก',
+    opts: ['จาน', 'นก', 'บิน'],
+    correct: 1,
+    explain: '"นก" มีตัว ก (ไก่) เป็นตัวสะกด อยู่ในมาตราแม่กก ส่วน "จาน" กับ "บิน" อยู่ในมาตราแม่กน'
+  },
+  // ---- ข้อ 15 ----
+  {
+    q: '"ร้องไห้" มีเครื่องหมายวรรณยุกต์อะไร',
+    opts: ['ไม้เอก', 'ไม้โท', 'ไม้ตรี'],
+    correct: 1,
+    explain: 'ทั้ง "ร้อง" และ "ไห้" มีไม้โทกำกับ: ร้-อ-ง ไม้โท, ไห้ ไม้โท'
+  },
+  // ---- ข้อ 16 ----
+  {
+    q: 'คำว่า "ฝนตก" คำใดเป็นคำกริยา',
+    opts: ['ฝน', 'ตก', 'ฝนตก (ทั้งคำ)'],
+    correct: 1,
+    explain: '"ฝน" เป็นคำนาม (ชื่อสิ่งของ) ส่วน "ตก" เป็นคำกริยา (บอกอาการ)'
+  },
+  // ---- ข้อ 17 ----
+  {
+    q: 'คำว่า "กุ้ง" มีกี่ตัวอักษร (นับรวมสระและวรรณยุกต์)',
+    opts: ['3 ตัว', '4 ตัว', '5 ตัว'],
+    correct: 1,
+    explain: '"กุ้ง" เขียนว่า ก + ุ (สระอุ) + ง + ้ (ไม้โท) = รวม 4 ตัวอักษร'
+  },
+  // ---- ข้อ 18 ----
+  {
+    q: 'คำในข้อใดมี 2 พยางค์',
+    opts: ['ปลา', 'เรียน', 'สะพาน'],
+    correct: 2,
+    explain: '"ปลา" 1 พยางค์, "เรียน" 1 พยางค์, "สะพาน" อ่านว่า สะ-พาน 2 พยางค์'
+  },
+  // ---- ข้อ 19 ----
+  {
+    q: 'คำว่า "ปากกา" มีสระอะไรในทั้งสองพยางค์',
+    opts: ['สระอา', 'สระอี', 'สระอู'],
+    correct: 0,
+    explain: '"ปากกา" อ่านว่า ปาก-กา ทั้ง "ปาก" และ "กา" มีสระอา (อา) เหมือนกัน'
+  },
+  // ---- ข้อ 20 ----
+  {
+    q: 'คำว่า "นก" ตัวสะกดคือตัวอะไร',
+    opts: ['ก (ไก่)', 'น (หนู)', 'ด (เด็ก)'],
+    correct: 0,
+    explain: '"นก" สะกดว่า นอ-โอก มีตัว ก (ไก่) เป็นตัวสะกด อยู่ในมาตราแม่กก'
+  }
+];
+
+// ============================================================
+// 4. LEVEL DATA — พื้น, ชานชาลา, เห็ด, หลุม, เช็คพอยต์
+// ============================================================
+const LEVEL = {
+  // พื้นดิน (segment)
+  groundSegments: [],
+  // ชานชาลาลอยฟ้า
+  platforms: [],
+  // ตำแหน่งเห็ดคำถาม (x, y) — 20 อัน
+  mushrooms: [],
+  // หลุม (อันตราย)
+  pits: [],
+  // เช็คพอยต์
+  checkpoints: [],
+  // เส้นชัย
+  finishX: 5400,
+};
+
+(function buildLevel() {
+  const GY = CONFIG.GROUND_Y;
+  const GH = CONFIG.GROUND_HEIGHT;
+
+  // ---- พื้นดิน ----
+  // ช่วงที่ 1: 0-800
+  LEVEL.groundSegments.push({x: 0, y: GY, w: 800, h: GH});
+  // หลุม 1: 800-880 (80px)
+  LEVEL.pits.push({x: 800, w: 80});
+  // ช่วงที่ 2: 880-2000
+  LEVEL.groundSegments.push({x: 880, y: GY, w: 1120, h: GH});
+  // หลุม 2: 2000-2100
+  LEVEL.pits.push({x: 2000, w: 100});
+  // ช่วงที่ 3: 2100-3000
+  LEVEL.groundSegments.push({x: 2100, y: GY, w: 900, h: GH});
+  // หลุม 3: 3000-3080
+  LEVEL.pits.push({x: 3000, w: 80});
+  // ช่วงที่ 4: 3080-4000
+  LEVEL.groundSegments.push({x: 3080, y: GY, w: 920, h: GH});
+  // หลุม 4: 4000-4100
+  LEVEL.pits.push({x: 4000, w: 100});
+  // ช่วงที่ 5: 4100-5000
+  LEVEL.groundSegments.push({x: 4100, y: GY, w: 900, h: GH});
+  // หลุม 5: 5000-5080
+  LEVEL.pits.push({x: 5000, w: 80});
+  // ช่วงที่ 6: 5080-5600 (เส้นชัย)
+  LEVEL.groundSegments.push({x: 5080, y: GY, w: 520, h: GH});
+
+  // ---- ชานชาลาลอยฟ้า (platforms) ----
+  LEVEL.platforms.push(
+    {x: 350, y: 390, w: 130, h: 18},
+    {x: 700, y: 380, w: 100, h: 18},
+    {x: 1100, y: 400, w: 120, h: 18},
+    {x: 1400, y: 370, w: 110, h: 18},
+    {x: 1700, y: 390, w: 130, h: 18},
+    {x: 1950, y: 350, w: 100, h: 18},
+    {x: 2300, y: 380, w: 120, h: 18},
+    {x: 2600, y: 360, w: 130, h: 18},
+    {x: 2900, y: 400, w: 100, h: 18},
+    {x: 3250, y: 370, w: 120, h: 18},
+    {x: 3550, y: 390, w: 110, h: 18},
+    {x: 3850, y: 355, w: 130, h: 18},
+    {x: 4200, y: 380, w: 120, h: 18},
+    {x: 4500, y: 360, w: 110, h: 18},
+    {x: 4800, y: 385, w: 130, h: 18},
+    {x: 5100, y: 370, w: 120, h: 18}
+  );
+
+  // ---- เห็ดคำถาม 20 อัน ----
+  const mPositions = [
+    {x: 200, y: GY - CONFIG.MUSHROOM_H},           // 1
+    {x: 450, y: 390 - CONFIG.MUSHROOM_H},           // 2 (บน platform)
+    {x: 620, y: GY - CONFIG.MUSHROOM_H},           // 3
+    {x: 950, y: GY - CONFIG.MUSHROOM_H},           // 4
+    {x: 1150, y: 400 - CONFIG.MUSHROOM_H},         // 5
+    {x: 1350, y: GY - CONFIG.MUSHROOM_H},          // 6
+    {x: 1500, y: 370 - CONFIG.MUSHROOM_H},         // 7
+    {x: 1750, y: 390 - CONFIG.MUSHROOM_H},         // 8
+    {x: 1900, y: GY - CONFIG.MUSHROOM_H},          // 9
+    {x: 2150, y: GY - CONFIG.MUSHROOM_H},          // 10
+    {x: 2400, y: 380 - CONFIG.MUSHROOM_H},         // 11
+    {x: 2700, y: 360 - CONFIG.MUSHROOM_H},         // 12
+    {x: 2950, y: 400 - CONFIG.MUSHROOM_H},         // 13
+    {x: 3150, y: GY - CONFIG.MUSHROOM_H},          // 14
+    {x: 3400, y: 370 - CONFIG.MUSHROOM_H},         // 15
+    {x: 3650, y: 390 - CONFIG.MUSHROOM_H},         // 16
+    {x: 3900, y: 355 - CONFIG.MUSHROOM_H},         // 17
+    {x: 4150, y: GY - CONFIG.MUSHROOM_H},          // 18
+    {x: 4400, y: 380 - CONFIG.MUSHROOM_H},         // 19
+    {x: 4700, y: GY - CONFIG.MUSHROOM_H},          // 20
+  ];
+  LEVEL.mushrooms = mPositions;
+
+  // ---- เช็คพอยต์ (ทุก 4-5 เห็ด) ----
+  LEVEL.checkpoints = [
+    {x: 300, y: GY},    // checkpoint 1
+    {x: 1300, y: GY},   // checkpoint 2
+    {x: 2600, y: GY},   // checkpoint 3
+    {x: 3900, y: GY},   // checkpoint 4
+    {x: 4700, y: GY},   // checkpoint 5
+  ];
+})();
+
+// ============================================================
+// 5. GAME STATE
+// ============================================================
+const state = {
+  phase: 'start',        // start | playing | question | gameover | victory
+  playerName: '',
+  avatarEmoji: '👷',
+  score: 0,
+  hearts: 3,
+  maxHearts: 3,
+  correctCount: 0,
+  currentQuestion: 0,    // index in QUESTIONS (0-19)
+  collectedMushrooms: new Array(CONFIG.TOTAL_QUESTIONS).fill(false),
+  answeredThisMushroom: false,
+  checkpointIndex: 0,    // index in LEVEL.checkpoints
+
+  // Player physics
+  player: {
+    x: 60,
+    y: CONFIG.GROUND_Y - CONFIG.PLAYER_H,
+    w: CONFIG.PLAYER_W,
+    h: CONFIG.PLAYER_H,
+    vx: 0,
+    vy: 0,
+    onGround: false,
+    facing: 1,           // 1 = right, -1 = left
+    walkFrame: 0,
+    walkTimer: 0,
+    alive: true,
+  },
+
+  // Camera
+  camera: { x: 0, y: 0 },
+
+  // Input
+  keys: { left: false, right: false, jump: false },
+
+  // Particles (effects)
+  particles: [],
+  flashTimer: 0,
+
+  // Canvas / context
+  canvas: null,
+  ctx: null,
+  pCanvas: null,
+  pCtx: null,
+  canvasW: 960,
+  canvasH: 540,
+};
+
+// ============================================================
+// 6. DRAWING HELPERS
+// ============================================================
+const Draw = {
+  /** วาดสี่เหลี่ยมมุมมน */
+  roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+  },
+
+  /** วาดเมฆ */
+  cloud(ctx, x, y, s) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath();
+    ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
+    ctx.arc(x + 22 * s, y - 8 * s, 18 * s, 0, Math.PI * 2);
+    ctx.arc(x + 44 * s, y - 2 * s, 16 * s, 0, Math.PI * 2);
+    ctx.arc(x + 20 * s, y + 4 * s, 14 * s, 0, Math.PI * 2);
+    ctx.fill();
+  },
+
+  /** วาดภูเขา */
+  mountain(ctx, x, peakH, w, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, state.canvasH);
+    ctx.lineTo(x + w / 2, state.canvasH - peakH);
+    ctx.lineTo(x + w, state.canvasH);
+    ctx.closePath();
+    ctx.fill();
+    // ยอดเขาหิมะ
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2 - 12, state.canvasH - peakH + 8);
+    ctx.lineTo(x + w / 2, state.canvasH - peakH);
+    ctx.lineTo(x + w / 2 + 12, state.canvasH - peakH + 10);
+    ctx.closePath();
+    ctx.fill();
+  },
+
+  /** วาดเห็ดคำถาม */
+  mushroom(ctx, x, y, w, h, collected) {
+    if (collected) return;
+    // ก้าน
+    ctx.fillStyle = '#F5DEB3';
+    ctx.fillRect(x + w * 0.25, y + h * 0.45, w * 0.5, h * 0.55);
+    // หมวก
+    ctx.fillStyle = '#E53935';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h * 0.45, w / 2, h * 0.45, 0, Math.PI, 0);
+    ctx.fill();
+    // จุดขาว
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.3, y + h * 0.2, 3, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.65, y + h * 0.15, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + w * 0.5, y + h * 0.3, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // เครื่องหมาย ?
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px Mali, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', x + w / 2, y + h * 0.15);
+  },
+
+  /** วาดตัวละครผู้เล่น */
+  player(ctx, p, emoji) {
+    const cx = p.x + p.w / 2;
+    const by = p.y + p.h; // bottom
+    const headR = 11;
+    const headY = p.y + 2;
+
+    // เงา
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(cx, by, 14, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // เท้า/รองเท้า
+    const legAnim = p.onGround ? Math.sin(p.walkFrame * 0.3) * 3 : 2;
+    ctx.fillStyle = '#5D4037';
+    ctx.fillRect(p.x + 4, by - 6 - legAnim, 8, 6);
+    ctx.fillRect(p.x + p.w - 12, by - 6 + legAnim, 8, 6);
+
+    // กางเกง/ขา
+    ctx.fillStyle = '#1565C0';
+    ctx.fillRect(p.x + 4, p.y + p.h - 14, 8, 10);
+    ctx.fillRect(p.x + p.w - 12, p.y + p.h - 14, 8, 10);
+
+    // ลำตัว (เสื้อ)
+    const bodyColor = '#42A5F5';
+    Draw.roundRect(ctx, p.x + 2, p.y + 12, p.w - 4, p.h - 24, 4, bodyColor);
+
+    // เข็มขัด
+    ctx.fillStyle = '#8D6E63';
+    ctx.fillRect(p.x + 4, p.y + p.h - 16, p.w - 8, 3);
+
+    // แขน
+    const armSwing = p.onGround ? Math.sin(p.walkFrame * 0.3) * 4 : 0;
+    ctx.fillStyle = '#FFCC80';
+    ctx.fillRect(p.x - 3, p.y + 16 + armSwing, 5, 12);
+    ctx.fillRect(p.x + p.w - 2, p.y + 16 - armSwing, 5, 12);
+
+    // หัว (skin)
+    ctx.fillStyle = '#FFCC80';
+    ctx.beginPath();
+    ctx.arc(cx, headY + headR, headR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ตา
+    const eyeDir = p.facing;
+    ctx.fillStyle = '#3E2723';
+    ctx.beginPath();
+    ctx.arc(cx + eyeDir * 3 - 3, headY + headR - 1, 2.5, 0, Math.PI * 2);
+    ctx.arc(cx + eyeDir * 3 + 3, headY + headR - 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // ตาขาว (ประกาย)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx + eyeDir * 3 - 2, headY + headR - 2.5, 1, 0, Math.PI * 2);
+    ctx.arc(cx + eyeDir * 3 + 4, headY + headR - 2.5, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ปาก (ยิ้ม)
+    ctx.strokeStyle = '#5D4037';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (p.vy < -2) {
+      // ตกใจตอนกระโดด
+      ctx.arc(cx, headY + headR + 5, 4, 0, Math.PI);
+    } else {
+      ctx.arc(cx, headY + headR + 4, 4, 0.1, Math.PI - 0.1);
+    }
+    ctx.stroke();
+
+    // แก้ม
+    ctx.fillStyle = 'rgba(255,150,150,0.3)';
+    ctx.beginPath();
+    ctx.arc(cx - 8, headY + headR + 2, 4, 0, Math.PI * 2);
+    ctx.arc(cx + 8, headY + headR + 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Avatar Emoji บนหัว (หมวก)
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(emoji, cx, headY + 2);
+  },
+
+  /** วาดธงเส้นชัย */
+  finishFlag(ctx, x) {
+    const gy = CONFIG.GROUND_Y;
+    // เสาธง
+    ctx.fillStyle = '#795548';
+    ctx.fillRect(x, gy - 100, 5, 100);
+    // ลูกกลมบนเสา
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(x + 2.5, gy - 100, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // ธง
+    ctx.fillStyle = '#F44336';
+    ctx.beginPath();
+    ctx.moveTo(x + 7, gy - 100);
+    ctx.lineTo(x + 45, gy - 88);
+    ctx.lineTo(x + 7, gy - 76);
+    ctx.closePath();
+    ctx.fill();
+    // ข้อความ
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Mali, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('เส้นชัย', x + 25, gy - 105);
+  },
+
+  /** วาดเช็คพอยต์ (ธงเล็ก) */
+  checkpoint(ctx, x) {
+    const gy = CONFIG.GROUND_Y;
+    ctx.fillStyle = '#66BB6A';
+    ctx.fillRect(x, gy - 30, 3, 30);
+    ctx.fillStyle = '#81C784';
+    ctx.beginPath();
+    ctx.moveTo(x + 3, gy - 30);
+    ctx.lineTo(x + 18, gy - 22);
+    ctx.lineTo(x + 3, gy - 14);
+    ctx.closePath();
+    ctx.fill();
+  },
+
+  /** วาดข้อความบน Canvas */
+  text(ctx, str, x, y, color, size, align, baseline) {
+    ctx.fillStyle = color || '#fff';
+    ctx.font = `bold ${size || 16}px Mali, sans-serif`;
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = baseline || 'top';
+    ctx.fillText(str, x, y);
+  }
+};
+
+// ============================================================
+// 7. PHYSICS & COLLISION
+// ============================================================
+const Physics = {
+  /** ตรวจสอบการชน AABB */
+  overlaps(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x &&
+           a.y < b.y + b.h && a.y + a.h > b.y;
+  },
+
+  /** หาค่า ground y ที่ตำแหน่ง x */
+  getGroundAt(x) {
+    for (const seg of LEVEL.groundSegments) {
+      if (x >= seg.x && x <= seg.x + seg.w) return seg.y;
+    }
+    return null;
+  },
+
+  /** เช็คว่าอยู่ในหลุม */
+  isInPit(x) {
+    for (const pit of LEVEL.pits) {
+      if (x >= pit.x && x <= pit.x + pit.w) return true;
+    }
+    return false;
+  },
+
+  /** อัปเดตฟิสิกส์ผู้เล่น */
+  update(p, keys) {
+    if (!p.alive) return;
+
+    // แรงโน้มถ่วง
+    p.vy += CONFIG.GRAVITY;
+    if (p.vy > CONFIG.MAX_FALL) p.vy = CONFIG.MAX_FALL;
+
+    // แนวนอน
+    let moveX = 0;
+    if (keys.left) moveX = -CONFIG.MOVE_SPEED;
+    if (keys.right) moveX = CONFIG.MOVE_SPEED;
+    p.vx = moveX;
+    if (moveX !== 0) p.facing = moveX > 0 ? 1 : -1;
+
+    // Walk animation
+    if (p.onGround && moveX !== 0) {
+      p.walkTimer++;
+      if (p.walkTimer >= 6) { p.walkTimer = 0; p.walkFrame++; }
+    } else if (p.onGround) {
+      p.walkFrame = 0;
+    }
+
+    // กระโดด
+    if (keys.jump && p.onGround) {
+      p.vy = CONFIG.JUMP_VEL;
+      p.onGround = false;
+      AudioSys.play('jump');
+    }
+
+    // อัปเดตตำแหน่ง X
+    p.x += p.vx;
+    // ชนขอบโลก
+    if (p.x < 0) p.x = 0;
+    if (p.x + p.w > CONFIG.WORLD_WIDTH) p.x = CONFIG.WORLD_WIDTH - p.w;
+
+    // ชน platform แนวนอน
+    for (const plat of LEVEL.platforms) {
+      if (this.overlaps(p, plat)) {
+        if (p.vx > 0) p.x = plat.x - p.w;
+        else if (p.vx < 0) p.x = plat.x + plat.w;
+        p.vx = 0;
+      }
+    }
+
+    // อัปเดตตำแหน่ง Y
+    p.y += p.vy;
+    p.onGround = false;
+
+    // ตรวจสอบชนพื้น (ground segments)
+    for (const seg of LEVEL.groundSegments) {
+      if (this.overlaps(p, seg)) {
+        if (p.vy > 0) {
+          // ตกมาชน
+          p.y = seg.y - p.h;
+          p.vy = 0;
+          p.onGround = true;
+        } else if (p.vy < 0) {
+          // กระโดดชนใต้พื้น
+          p.y = seg.y + seg.h;
+          p.vy = 0;
+        }
+      }
+    }
+
+    // ตรวจสอบชน platform (จากด้านบนเท่านั้น)
+    for (const plat of LEVEL.platforms) {
+      const prevBottom = p.y + p.h - p.vy;
+      if (p.vy >= 0 &&
+          p.x + p.w > plat.x && p.x < plat.x + plat.w &&
+          p.y + p.h >= plat.y && p.y + p.h <= plat.y + plat.h + p.vy + 2) {
+        p.y = plat.y - p.h;
+        p.vy = 0;
+        p.onGround = true;
+      }
+    }
+
+    // ตรวจสอบตกหลุม
+    if (p.y > state.canvasH + 50) {
+      // หล่นนอกจอ = ตกหลุม
+      this.playerFell();
+    }
+  },
+
+  playerFell() {
+    const p = state.player;
+    if (!p.alive) return; // ป้องกันตกซ้ำ
+    p.alive = false;
+    AudioSys.play('fall');
+    state.hearts--;
+    // กระพริบจอแดง (flash effect)
+    state.flashTimer = 15;
+    if (state.hearts <= 0) {
+      setTimeout(() => { goGameOver(); }, 500);
+    } else {
+      setTimeout(() => { respawnPlayer(); }, 600);
+    }
+  },
+
+  /** เช็คเก็บเห็ด */
+  checkMushrooms(p) {
+    for (let i = 0; i < LEVEL.mushrooms.length; i++) {
+      if (state.collectedMushrooms[i]) continue;
+      const m = LEVEL.mushrooms[i];
+      const mRect = { x: m.x, y: m.y, w: CONFIG.MUSHROOM_W, h: CONFIG.MUSHROOM_H };
+      // ขยาย hitbox เล็กน้อย
+      const expanded = { x: mRect.x - 4, y: mRect.y - 4, w: mRect.w + 8, h: mRect.h + 8 };
+      if (this.overlaps(p, expanded)) {
+        state.collectedMushrooms[i] = true;
+        state.currentQuestion = i;
+        showQuestion(i);
+        return;
+      }
+    }
+  },
+
+  /** เช็คถึงเส้นชัย */
+  checkFinish(p) {
+    if (p.x + p.w >= LEVEL.finishX) {
+      goVictory();
+      return true;
+    }
+    return false;
+  },
+
+  /** เช็คเช็คพอยต์ */
+  checkCheckpoints(p) {
+    for (let i = 0; i < LEVEL.checkpoints.length; i++) {
+      if (i <= state.checkpointIndex) continue; // ผ่านแล้ว
+      const cp = LEVEL.checkpoints[i];
+      if (p.x >= cp.x) {
+        state.checkpointIndex = i;
+      }
+    }
+  }
+};
+
+// ============================================================
+// 8. PARTICLES SYSTEM (พลุตอบถูก)
+// ============================================================
+const Particles = {
+  add(x, y, count, color) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 5;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        life: 1,
+        decay: 0.012 + Math.random() * 0.02,
+        size: 3 + Math.random() * 5,
+        color: color || ['#FFD700','#FF6F00','#F44336','#4CAF50','#2196F3','#E040FB'][Math.floor(Math.random()*6)],
+        type: 'sparkle'
+      });
+    }
+  },
+
+  addConfetti(x, y) {
+    for (let i = 0; i < 40; i++) {
+      state.particles.push({
+        x: x + (Math.random() - 0.5) * 80,
+        y: y + (Math.random() - 0.5) * 40,
+        vx: (Math.random() - 0.5) * 6,
+        vy: -3 - Math.random() * 5,
+        life: 1,
+        decay: 0.008 + Math.random() * 0.01,
+        size: 4 + Math.random() * 6,
+        color: ['#FFD700','#FF6F00','#F44336','#4CAF50','#2196F3','#9C27B0','#E91E63'][Math.floor(Math.random()*7)],
+        type: 'confetti'
+      });
+    }
+  },
+
+  update() {
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const p = state.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.life -= p.decay;
+      if (p.life <= 0) {
+        state.particles.splice(i, 1);
+      }
+    }
+  },
+
+  draw(ctx, camX) {
+    for (const p of state.particles) {
+      const screenX = p.x - camX;
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      if (p.type === 'confetti') {
+        ctx.fillRect(screenX - p.size/2, p.y - p.size/2, p.size * 0.7, p.size * 0.4);
+      } else {
+        // sparkle: star shape
+        ctx.beginPath();
+        ctx.arc(screenX, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        // glow
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+};
+
+// ============================================================
+// 9. UI FUNCTIONS
+// ============================================================
+
+/** แสดงหน้าคำถาม */
+function showQuestion(index) {
+  state.phase = 'question';
+  const q = QUESTIONS[index];
+  if (!q) return;
+
+  const overlay = document.getElementById('question-overlay');
+  overlay.classList.add('show');
+
+  document.getElementById('q-number').textContent = index + 1;
+  document.getElementById('q-text').textContent = q.q;
+
+  const optsDiv = document.getElementById('q-options');
+  optsDiv.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = `${['ก','ข','ค'][i]}. ${opt}`;
+    btn.dataset.index = i;
+    btn.addEventListener('click', () => handleAnswer(i));
+    optsDiv.appendChild(btn);
+  });
+
+  document.getElementById('result-icon').textContent = '';
+  document.getElementById('explanation-box').classList.remove('show');
+  document.getElementById('explanation-box').textContent = '';
+  document.getElementById('q-continue-btn').style.display = 'none';
+  state.answeredThisMushroom = false;
+}
+
+/** จัดการเมื่อตอบคำถาม */
+function handleAnswer(selected) {
+  if (state.answeredThisMushroom) return;
+  state.answeredThisMushroom = true;
+  const qIdx = state.currentQuestion;
+  const q = QUESTIONS[qIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  const isCorrect = selected === q.correct;
+
+  // ปิดการกดปุ่ม
+  btns.forEach(b => b.disabled = true);
+
+  // แสดงผล
+  if (isCorrect) {
+    btns[q.correct].classList.add('correct');
+    state.score++;
+    state.correctCount++;
+    AudioSys.play('correct');
+    document.getElementById('result-icon').textContent = '✅ ถูกต้อง!';
+    // พลุ
+    const canvas = state.canvas;
+    Particles.add(canvas.width / 2, canvas.height / 3, 25);
+    Particles.addConfetti(canvas.width / 2, canvas.height / 3);
+  } else {
+    btns[selected].classList.add('wrong');
+    btns[q.correct].classList.add('correct');
+    AudioSys.play('wrong');
+    document.getElementById('result-icon').textContent = '❌ ผิดนิดหน่อย';
+  }
+
+  // แสดงคำอธิบาย
+  const expBox = document.getElementById('explanation-box');
+  expBox.textContent = (isCorrect ? '🎉 ' : '💡 ') + q.explain;
+  expBox.classList.add('show');
+
+  // อัปเดต HUD
+  updateHUD();
+
+  // ปุ่มต่อไป
+  const contBtn = document.getElementById('q-continue-btn');
+  contBtn.style.display = 'block';
+  contBtn.onclick = () => {
+    document.getElementById('question-overlay').classList.remove('show');
+    // ล้าง keyboard state ป้องกันผู้เล่นวิ่งต่อทันที
+    state.keys.left = false;
+    state.keys.right = false;
+    state.keys.jump = false;
+    state.phase = 'playing';
+  };
+}
+
+/** ไปที่ Game Over */
+function goGameOver() {
+  state.phase = 'gameover';
+  document.getElementById('gameover-score').textContent = state.score;
+  document.getElementById('gameover-correct').textContent = state.correctCount;
+  document.getElementById('gameover-overlay').style.display = 'flex';
+  document.getElementById('game-wrapper').style.display = 'none';
+}
+
+/** ไปที่ Victory */
+function goVictory() {
+  state.phase = 'victory';
+  AudioSys.play('victory');
+  Particles.addConfetti(state.canvas.width / 2, 100);
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      Particles.addConfetti(state.canvas.width / 2, 100);
+    }, i * 300);
+  }
+  document.getElementById('victory-score').textContent = state.score;
+  document.getElementById('victory-correct').textContent = state.correctCount;
+  document.getElementById('victory-overlay').style.display = 'flex';
+  document.getElementById('game-wrapper').style.display = 'none';
+}
+
+/** Respawn ที่ checkpoint ล่าสุด */
+function respawnPlayer() {
+  const p = state.player;
+  const cp = LEVEL.checkpoints[state.checkpointIndex] || LEVEL.checkpoints[0];
+  p.x = cp.x - 30;
+  p.y = CONFIG.GROUND_Y - p.h;
+  p.vx = 0;
+  p.vy = 0;
+  p.alive = true;
+  p.onGround = true;
+  // ล้าง keyboard state ป้องกันผู้เล่นวิ่งตกหลุมซ้ำ
+  state.keys.left = false;
+  state.keys.right = false;
+  state.keys.jump = false;
+  updateHUD();
+  state.phase = 'playing';
+}
+
+/** อัปเดต HUD */
+function updateHUD() {
+  document.getElementById('hud-avatar').textContent = state.avatarEmoji;
+  document.getElementById('hud-name').textContent = state.playerName;
+  const heartsStr = '❤️'.repeat(Math.max(0, state.hearts)) + '🖤'.repeat(Math.max(0, state.maxHearts - state.hearts));
+  document.getElementById('hud-hearts').textContent = heartsStr || '💔';
+  document.getElementById('hud-score').textContent = `⭐ ${state.score}`;
+
+  // Progress bar (based on player x position)
+  const progress = Math.min(100, Math.max(0, (state.player.x / LEVEL.finishX) * 100));
+  document.getElementById('hud-progress-fill').style.width = progress + '%';
+}
+
+// ============================================================
+// 10. RENDERER — Parallax + All Game Objects
+// ============================================================
+function render() {
+  const ctx = state.ctx;
+  const cw = state.canvasW;
+  const ch = state.canvasH;
+  const cam = state.camera;
+  const p = state.player;
+
+  // ---- Clear ----
+  ctx.clearRect(0, 0, cw, ch);
+
+  // ---- Sky Gradient ----
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, ch);
+  skyGrad.addColorStop(0, '#87CEEB');
+  skyGrad.addColorStop(0.5, '#B3E5FC');
+  skyGrad.addColorStop(0.85, '#FFF8E1');
+  skyGrad.addColorStop(1, '#FFECB3');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, cw, ch);
+
+  // ---- Flash effect (เมื่อตกหลุม) ----
+  if (state.flashTimer > 0) {
+    ctx.fillStyle = `rgba(255,0,0,${state.flashTimer * 0.02})`;
+    ctx.fillRect(0, 0, cw, ch);
+    state.flashTimer--;
+  }
+
+  // ---- Sun ----
+  ctx.fillStyle = 'rgba(255,235,59,0.9)';
+  ctx.beginPath();
+  ctx.arc(cw - 80, 60, 35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,235,59,0.2)';
+  ctx.beginPath();
+  ctx.arc(cw - 80, 60, 55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,235,59,0.1)';
+  ctx.beginPath();
+  ctx.arc(cw - 80, 60, 75, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ---- Clouds (parallax 0.05) ----
+  const cloudOffset = cam.x * 0.05;
+  Draw.cloud(ctx, 100 - cloudOffset % 600, 60, 1.2);
+  Draw.cloud(ctx, 350 - cloudOffset % 800 + 200, 90, 1.0);
+  Draw.cloud(ctx, 600 - cloudOffset % 700 + 400, 45, 1.4);
+  Draw.cloud(ctx, 900 - cloudOffset % 900 + 100, 75, 0.9);
+
+  // ---- Far Mountains (parallax 0.1) ----
+  const farOffset = cam.x * 0.1;
+  const montColors = ['#8BC34A', '#9CCC65', '#7CB342'];
+  const mountainData = [
+    { x: 0, h: 160, w: 280 },
+    { x: 200, h: 220, w: 320 },
+    { x: 450, h: 180, w: 300 },
+    { x: 680, h: 240, w: 350 },
+    { x: 950, h: 170, w: 280 },
+  ];
+  for (let i = 0; i < 15; i++) {
+    for (const m of mountainData) {
+      const mx = m.x + i * 1200 - (farOffset % (15 * 1200));
+      Draw.mountain(ctx, mx, m.h, m.w, montColors[i % 3]);
+    }
+  }
+
+  // ---- Near Mountains (parallax 0.3) ----
+  const nearOffset = cam.x * 0.3;
+  const nearColors = ['#66BB6A', '#43A047', '#388E3C'];
+  const nearMts = [
+    { x: 0, h: 100, w: 200 },
+    { x: 150, h: 130, w: 240 },
+    { x: 350, h: 90, w: 180 },
+  ];
+  for (let i = 0; i < 20; i++) {
+    for (const m of nearMts) {
+      const mx = m.x + i * 600 - (nearOffset % (20 * 600));
+      Draw.mountain(ctx, mx, m.h, m.w, nearColors[i % 3]);
+    }
+  }
+
+  // ---- Trees/Bushes (parallax 0.5) ----
+  const bushOffset = cam.x * 0.5;
+  for (let i = 0; i < 30; i++) {
+    const bx = i * 200 - (bushOffset % (30 * 200));
+    const by = CONFIG.GROUND_Y - 5;
+    ctx.fillStyle = ['#4CAF50','#388E3C','#2E7D32'][i % 3];
+    ctx.beginPath();
+    ctx.arc(bx, by, 14 + (i % 5) * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#5D4037';
+    ctx.fillRect(bx - 2, by, 4, 10);
+  }
+
+  // ---- Ground ----
+  for (const seg of LEVEL.groundSegments) {
+    const gx = seg.x - cam.x;
+    // ตรวจสอบว่า visible
+    if (gx + seg.w < -10 || gx > cw + 10) continue;
+    // ดิน
+    ctx.fillStyle = '#8D6E63';
+    ctx.fillRect(gx, seg.y, seg.w, seg.h);
+    // หญ้า
+    ctx.fillStyle = '#66BB6A';
+    ctx.fillRect(gx, seg.y, seg.w, 5);
+    // เส้นขอบบน
+    ctx.fillStyle = '#558B2F';
+    ctx.fillRect(gx, seg.y, seg.w, 1.5);
+    // ลายดิน
+    ctx.fillStyle = '#6D4C41';
+    for (let tx = 0; tx < seg.w; tx += 40) {
+      ctx.fillRect(gx + tx + 15, seg.y + 12, 8, 3);
+      ctx.fillRect(gx + tx + 35, seg.y + 24, 6, 3);
+    }
+  }
+
+  // ---- Pits (หลุม) ----
+  for (const pit of LEVEL.pits) {
+    const px = pit.x - cam.x;
+    if (px + pit.w < -10 || px > cw + 10) continue;
+    // หลุมสีเข้ม
+    ctx.fillStyle = '#2E1B0E';
+    ctx.fillRect(px, CONFIG.GROUND_Y, pit.w, CONFIG.GROUND_HEIGHT);
+    // ขอบหลุม
+    ctx.fillStyle = '#5D4037';
+    ctx.fillRect(px - 2, CONFIG.GROUND_Y, 4, CONFIG.GROUND_HEIGHT);
+    ctx.fillRect(px + pit.w - 2, CONFIG.GROUND_Y, 4, CONFIG.GROUND_HEIGHT);
+    // คำเตือน 危险
+    ctx.fillStyle = 'rgba(255,0,0,0.3)';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠', px + pit.w / 2, CONFIG.GROUND_Y + 12);
+  }
+
+  // ---- Platforms ----
+  for (const plat of LEVEL.platforms) {
+    const px = plat.x - cam.x;
+    if (px + plat.w < -10 || px > cw + 10) continue;
+    // ตัว platform
+    ctx.fillStyle = '#5D4037';
+    Draw.roundRect(ctx, px, plat.y, plat.w, plat.h, 3, '#A1887F', '#795548');
+    // หญ้าบน
+    ctx.fillStyle = '#81C784';
+    ctx.fillRect(px + 2, plat.y, plat.w - 4, 4);
+    // จุดประดับ
+    ctx.fillStyle = '#8D6E63';
+    for (let dx = 10; dx < plat.w; dx += 25) {
+      ctx.fillRect(px + dx, plat.y + 8, 4, 3);
+    }
+  }
+
+  // ---- Checkpoints ----
+  for (const cp of LEVEL.checkpoints) {
+    const cx = cp.x - cam.x;
+    if (cx > -20 && cx < cw + 20) {
+      Draw.checkpoint(ctx, cp.x - cam.x);
+    }
+  }
+
+  // ---- Mushrooms ----
+  for (let i = 0; i < LEVEL.mushrooms.length; i++) {
+    const m = LEVEL.mushrooms[i];
+    const mx = m.x - cam.x;
+    if (mx + CONFIG.MUSHROOM_W < -10 || mx > cw + 10) continue;
+    Draw.mushroom(ctx, mx, m.y, CONFIG.MUSHROOM_W, CONFIG.MUSHROOM_H, state.collectedMushrooms[i]);
+  }
+
+  // ---- Finish Flag ----
+  const fx = LEVEL.finishX - cam.x;
+  if (fx > -60 && fx < cw + 60) {
+    Draw.finishFlag(ctx, fx);
+    // ประกาย
+    if (Math.floor(Date.now() / 500) % 2 === 0) {
+      ctx.fillStyle = 'rgba(255,215,0,0.6)';
+      ctx.beginPath();
+      ctx.arc(fx + 25, CONFIG.GROUND_Y - 80 + Math.sin(Date.now() / 300) * 10, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ---- Player ----
+  if (p.alive) {
+    Draw.player(ctx, { x: p.x - cam.x, y: p.y, w: p.w, h: p.h, onGround: p.onGround, vy: p.vy, walkFrame: p.walkFrame, facing: p.facing }, state.avatarEmoji);
+  }
+
+  // ---- Particles ----
+  Particles.draw(ctx, cam.x);
+}
+
+// ============================================================
+// 11. GAME LOOP
+// ============================================================
+function gameLoop() {
+  if (state.phase === 'playing' && state.player.alive) {
+    const p = state.player;
+    // Update physics
+    Physics.update(p, state.keys);
+    // Check mushroom collection
+    Physics.checkMushrooms(p);
+    // Check finish
+    Physics.checkFinish(p);
+    // Check checkpoint
+    Physics.checkCheckpoints(p);
+
+    // Update camera (smooth follow)
+    const targetCX = p.x - state.canvasW / 2 + p.w / 2;
+    state.camera.x += (targetCX - state.camera.x) * CONFIG.CAM_LERP;
+    state.camera.x = Math.max(0, Math.min(state.camera.x, CONFIG.WORLD_WIDTH - state.canvasW));
+
+    // Update HUD
+    updateHUD();
+  }
+
+  // Update particles always
+  Particles.update();
+
+  // Render
+  render();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// 12. INPUT HANDLING
+// ============================================================
+
+// ---- Keyboard ----
+document.addEventListener('keydown', (e) => {
+  const k = e.key;
+  if (state.phase === 'playing') {
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') state.keys.left = true;
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') state.keys.right = true;
+    if (k === 'ArrowUp' || k === 'w' || k === 'W' || k === ' ') {
+      state.keys.jump = true;
+      e.preventDefault();
+    }
+  }
+  // Prevent arrow scrolling
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(k)) e.preventDefault();
+});
+
+document.addEventListener('keyup', (e) => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') state.keys.left = false;
+  if (k === 'ArrowRight' || k === 'd' || k === 'D') state.keys.right = false;
+  if (k === 'ArrowUp' || k === 'w' || k === 'W' || k === ' ') {
+    state.keys.jump = false;
+  }
+});
+
+// ---- Mobile Touch Controls ----
+let mLeftPressed = false;
+let mRightPressed = false;
+let mJumpPressed = false;
+
+function setupMobileControls() {
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isTouch) {
+    document.getElementById('mobile-controls').classList.add('show');
+  }
+
+  const bind = (id, key, pressed) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const start = (e) => {
+      e.preventDefault();
+      if (key === 'left') { state.keys.left = true; mLeftPressed = true; }
+      if (key === 'right') { state.keys.right = true; mRightPressed = true; }
+      if (key === 'jump') { state.keys.jump = true; mJumpPressed = true; }
+    };
+    const end = (e) => {
+      e.preventDefault();
+      if (key === 'left') { state.keys.left = false; mLeftPressed = false; }
+      if (key === 'right') { state.keys.right = false; mRightPressed = false; }
+      if (key === 'jump') { state.keys.jump = false; mJumpPressed = false; }
+    };
+
+    el.addEventListener('touchstart', start, { passive: false });
+    el.addEventListener('touchend', end, { passive: false });
+    el.addEventListener('touchcancel', end, { passive: false });
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', end);
+  };
+
+  bind('m-left', 'left');
+  bind('m-right', 'right');
+  bind('m-jump', 'jump');
+}
+
+// ============================================================
+// 13. CANVAS RESIZE
+// ============================================================
+function resizeCanvas() {
+  const container = document.getElementById('game-container');
+  const canvas = state.canvas;
+  const rect = container.getBoundingClientRect();
+  canvas.width = state.canvasW;
+  canvas.height = state.canvasH;
+}
+
+// ============================================================
+// 14. INIT — START SCREEN
+// ============================================================
+
+// Avatar selection
+document.querySelectorAll('.avatar-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.avatarEmoji = btn.dataset.emoji;
+  });
+});
+
+// Start button
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('player-name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') startGame();
+});
+
+function startGame() {
+  const name = document.getElementById('player-name-input').value.trim();
+  if (!name) {
+    document.getElementById('start-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('start-error').style.display = 'none';
+
+  state.playerName = name;
+  state.avatarEmoji = document.querySelector('.avatar-btn.selected').dataset.emoji;
+
+  // Init audio system
+  AudioSys.init();
+
+  // Setup game
+  state.phase = 'playing';
+  state.score = 0;
+  state.hearts = state.maxHearts;
+  state.correctCount = 0;
+  state.collectedMushrooms = new Array(CONFIG.TOTAL_QUESTIONS).fill(false);
+  state.checkpointIndex = 0;
+  state.player.x = 60;
+  state.player.y = CONFIG.GROUND_Y - state.player.h;
+  state.player.vx = 0;
+  state.player.vy = 0;
+  state.player.alive = true;
+  state.camera.x = 0;
+
+  // Hide start, show game
+  document.getElementById('start-overlay').style.display = 'none';
+  document.getElementById('game-wrapper').style.display = 'flex';
+
+  // Setup canvas
+  const canvas = document.getElementById('gameCanvas');
+  const pCanvas = document.getElementById('particles-canvas');
+  state.canvas = canvas;
+  state.ctx = canvas.getContext('2d');
+  state.pCanvas = pCanvas;
+  state.pCtx = pCanvas.getContext('2d');
+
+  // Canvas sizing
+  resizeCanvas();
+
+  // Update HUD
+  updateHUD();
+
+  // Mobile controls
+  setupMobileControls();
+
+  // Start game loop
+  gameLoop();
+}
+
+// ---- Retry & Play Again ----
+document.getElementById('retry-btn').addEventListener('click', () => {
+  document.getElementById('gameover-overlay').style.display = 'none';
+  document.getElementById('start-overlay').style.display = 'flex';
+  document.getElementById('game-wrapper').style.display = 'none';
+  state.phase = 'start';
+});
+
+document.getElementById('playagain-btn').addEventListener('click', () => {
+  document.getElementById('victory-overlay').style.display = 'none';
+  document.getElementById('start-overlay').style.display = 'flex';
+  document.getElementById('game-wrapper').style.display = 'none';
+  state.phase = 'start';
+});
+
+// ---- Window Resize ----
+window.addEventListener('resize', resizeCanvas);
+
+console.log('🍄 ผจญภัยหุบเขาสะกดคำ — Game Loaded!');
+</script>
+</body>
+</html>
