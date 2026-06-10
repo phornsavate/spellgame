@@ -2,7 +2,11 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a2e">
 <title>ผจญภัยหุบเขาสะกดคำ — Thai Spelling Adventure</title>
 <script src="https://cdn.tailwindcss.com">
 </script>
@@ -15,49 +19,30 @@ html, body {
   overflow: hidden;
   font-family: 'Mali', cursive;
   background: #1a1a2e;
+  /* ป้องกัน pull-to-refresh และ overscroll */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+  /* safe area สำหรับ notch */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 /* ========== GAME WRAPPER ========== */
 #game-wrapper {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
+  position: fixed;
+  inset: 0;
   background: #1a1a2e;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 #game-container {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-}
-
-/* แนวนอนบนมือถือ: แสดงข้อความให้หมุนจอ */
-@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
-  body { background: #1a1a2e; }
-  #game-wrapper { display: none !important; }
-  #start-overlay { display: none !important; }
-  /* แสดงข้อความแทน */
-  body::after {
-    content: '📱 กรุณาหมุนจอเป็นแนวตั้ง';
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Mali', cursive;
-    font-size: 28px;
-    color: #fff;
-    background: #1a1a2e;
-    text-align: center;
-    padding: 40px;
-    z-index: 9999;
-  }
+  -webkit-touch-callout: none;
 }
 #gameCanvas {
   display: block;
@@ -68,31 +53,33 @@ html, body {
 #hud {
   position: absolute;
   top: 0; left: 0; right: 0;
-  padding: 8px 14px;
+  padding: 6px 10px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   pointer-events: none;
   z-index: 10;
-  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 100%);
+  font-size: 12px;
 }
-#hud-avatar { font-size: 24px; line-height: 1; }
-#hud-name { color: #fff; font-size: 14px; font-weight: 600; min-width: 60px; }
-#hud-hearts { font-size: 20px; line-height: 1; display: flex; gap: 2px; }
-#hud-score { color: #FFD700; font-size: 14px; font-weight: 600; margin-left: auto; white-space: nowrap; }
+#hud-avatar { font-size: 20px; line-height: 1; }
+#hud-name { color: #fff; font-size: 12px; font-weight: 600; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud-hearts { font-size: 16px; line-height: 1; display: flex; gap: 1px; }
+#hud-score { color: #FFD700; font-size: 12px; font-weight: 600; margin-left: auto; white-space: nowrap; }
 #hud-progress-wrap {
   position: absolute;
-  bottom: -18px; left: 14px; right: 14px;
-  height: 10px;
+  bottom: -14px; left: 10px; right: 10px;
+  height: 8px;
   background: rgba(255,255,255,0.2);
-  border-radius: 5px;
+  border-radius: 4px;
   overflow: hidden;
 }
 #hud-progress-fill {
   height: 100%;
   width: 0%;
   background: linear-gradient(90deg, #FFD700, #FF8C00);
-  border-radius: 5px;
+  border-radius: 4px;
   transition: width 0.3s ease;
 }
 
@@ -251,43 +238,48 @@ html, body {
 /* ========== MOBILE CONTROLS ========== */
 #mobile-controls {
   position: absolute;
-  bottom: 10px;
+  bottom: 0;
   left: 0;
   right: 0;
   display: none;
   z-index: 36;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   pointer-events: none;
+  background: linear-gradient(0deg, rgba(0,0,0,0.2) 0%, transparent 100%);
 }
 #mobile-controls.show { display: flex; }
 .mctrl-group {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   pointer-events: auto;
+  align-items: flex-end;
 }
 .mctrl-btn {
-  width: 56px; height: 56px;
+  width: 62px; height: 62px;
   border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.18);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   color: #fff;
-  font-size: 24px;
+  font-size: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s, background 0.08s;
 }
-.mctrl-btn:active { background: rgba(255,255,255,0.4); transform: scale(0.92); }
+.mctrl-btn:active { background: rgba(255,255,255,0.35); transform: scale(0.9); }
 .mctrl-btn.jump-btn {
-  width: 72px; height: 72px;
-  font-size: 20px;
+  width: 76px; height: 76px;
+  font-size: 22px;
   font-weight: 700;
-  background: rgba(255,152,0,0.3);
-  border-color: rgba(255,152,0,0.6);
+  background: rgba(255,152,0,0.25);
+  border-color: rgba(255,152,0,0.5);
 }
 
 /* ========== PARTICLES (พลุตอบถูก) ========== */
@@ -300,39 +292,34 @@ html, body {
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
-  .overlay-card { padding: 24px 20px; max-width: 360px; }
-  .overlay-card h1 { font-size: 22px; }
-  .overlay-card h2 { font-size: 18px; }
-  #hud { padding: 6px 10px; gap: 8px; }
-  #hud-name { font-size: 12px; min-width: 40px; }
-  #hud-hearts { font-size: 16px; }
-  #hud-score { font-size: 12px; }
-  .mctrl-btn { width: 48px; height: 48px; font-size: 20px; }
-  .mctrl-btn.jump-btn { width: 60px; height: 60px; }
+  .overlay-card { padding: 20px 16px; max-width: 92vw; max-height: 85vh; overflow-y: auto; }
+  .overlay-card h1 { font-size: 20px; }
+  .overlay-card h2 { font-size: 17px; }
+  .avatar-btn { font-size: 28px; width: 46px; height: 46px; }
+  .btn-primary { padding: 10px 24px; font-size: 16px; }
+  .option-btn { padding: 10px 14px; font-size: 15px; }
 }
 
-/* Portrait mode: ปุ่มควบคุมอยู่ล่างสุด ขนาดใหญ่ขึ้น */
-@media (orientation: portrait) {
-  #mobile-controls {
-    bottom: 0;
-    padding: 4px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);
-    background: linear-gradient(0deg, rgba(0,0,0,0.25) 0%, transparent 100%);
-  }
+/* จอมือถือแนวตั้ง: ปุ่มควบคุมใหญ่ขึ้น */
+@media (orientation: portrait) and (max-width: 500px) {
   .mctrl-btn {
-    width: 64px; height: 64px;
-    font-size: 26px;
+    width: 70px; height: 70px;
+    font-size: 30px;
   }
   .mctrl-btn.jump-btn {
-    width: 80px; height: 80px;
-    font-size: 24px;
+    width: 88px; height: 88px;
+    font-size: 26px;
   }
-  .mctrl-group { gap: 14px; }
-  .overlay-card { max-width: 92vw; padding: 18px 14px; }
-  .overlay-card h1 { font-size: 20px; }
-  #hud { padding: 6px 8px; gap: 6px; }
-  #hud-name { font-size: 11px; min-width: 30px; }
-  #hud-hearts { font-size: 14px; }
-  #hud-score { font-size: 11px; }
+  .mctrl-group { gap: 16px; }
+  #mobile-controls { padding: 0 16px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
+}
+
+/* จอเล็กมาก (iPhone SE) */
+@media (max-height: 500px) {
+  .overlay-card { padding: 14px 12px; }
+  .overlay-card h1 { font-size: 17px; }
+  .mctrl-btn { width: 54px; height: 54px; font-size: 22px; }
+  .mctrl-btn.jump-btn { width: 66px; height: 66px; font-size: 18px; }
 }
 </style>
 </head>
@@ -478,7 +465,7 @@ html, body {
 const CONFIG = {
   // Game world
   WORLD_WIDTH: 5600,
-  GROUND_Y: 490,          // y-position of ground surface
+  GROUND_Y: 490,          // y-position of ground surface (ใช้ค่าคงที่ ปรับตาม logical H)
   GROUND_HEIGHT: 40,
   TILE: 32,
   GRAVITY: 0.55,
@@ -1477,6 +1464,8 @@ function render() {
   const p = state.player;
 
   // ---- Clear ----
+  ctx.save();
+  ctx.setTransform(state.scaleX, 0, 0, state.scaleY, 0, 0);
   ctx.clearRect(0, 0, cw, ch);
 
   // ---- Sky Gradient ----
@@ -1655,6 +1644,8 @@ function render() {
 
   // ---- Particles (viewport coordinates) ----
   Particles.draw(ctx);
+
+  ctx.restore();
 }
 
 // ============================================================
@@ -1758,9 +1749,9 @@ function setupMobileControls() {
   bind('m-right', 'right');
   bind('m-jump', 'jump');
 }
-
 // ============================================================
-// 13. CANVAS RESIZE
+// 13. CANVAS RESIZE — ปรับ logical resolution ตามขนาดจอ
+// ============================================================
 function resizeCanvas() {
   const container = document.getElementById('game-container');
   const canvas = state.canvas;
@@ -1768,12 +1759,12 @@ function resizeCanvas() {
 
   const rect = container.getBoundingClientRect();
 
-  // Logical game resolution (960×540 coordinate space)
+  // Logical game resolution คงที่
   state.canvasW = 960;
   state.canvasH = 540;
 
-  // Canvas fills container exactly (no aspect-ratio lock)
   const dpr = window.devicePixelRatio || 1;
+  // เต็มจอเสมอ (stretch to fill — ภาพเต็มจอตามที่ต้องการ)
   canvas.width = Math.round(rect.width * dpr);
   canvas.height = Math.round(rect.height * dpr);
   canvas.style.width = rect.width + 'px';
@@ -1783,20 +1774,19 @@ function resizeCanvas() {
   canvas.style.top = '0';
 
   // Scale for rendering: logical → actual pixel
-  state.scaleX = canvas.width / state.canvasW;
-  state.scaleY = canvas.height / state.canvasH;
+  state.scaleX = canvas.width / 960;
+  state.scaleY = canvas.height / 540;
 
-  // Scale for input: screen css px → logical
-  state.inputScaleX = rect.width / state.canvasW;
-  state.inputScaleY = rect.height / state.canvasH;
-
-  // Particles canvas — same pixel dims, fills container
+  // Particles canvas — ขนาดเท่า container
   const pCanvas = state.pCanvas;
   if (pCanvas) {
     pCanvas.width = canvas.width;
     pCanvas.height = canvas.height;
     pCanvas.style.width = rect.width + 'px';
     pCanvas.style.height = rect.height + 'px';
+    pCanvas.style.position = 'absolute';
+    pCanvas.style.left = '0';
+    pCanvas.style.top = '0';
   }
 }
 
