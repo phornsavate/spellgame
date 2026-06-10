@@ -1463,8 +1463,13 @@ function render() {
   const cam = state.camera;
   const p = state.player;
 
-  // ---- Clear ----
+  // ---- Clear (เคลียร์ก่อน — ให้เห็นพื้นหลัง container เป็นสีดำ) ----
   ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform ก่อน clear ทั้งหมด
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, state.canvas.width, state.canvas.height); // เคลียร์ทั้ง container
+
+  // ตั้ง transform สำหรับวาดเกม (contain, ไม่บิดเบี้ยว)
   ctx.setTransform(state.scaleX, 0, 0, state.scaleY, 0, 0);
   ctx.clearRect(0, 0, cw, ch);
 
@@ -1759,35 +1764,44 @@ function resizeCanvas() {
 
   const rect = container.getBoundingClientRect();
 
-  // Logical game resolution คงที่
+  // Logical game resolution คงที่ (960×540 — 16:9)
   state.canvasW = 960;
   state.canvasH = 540;
 
+  // Contain: scale เดียวกันทั้ง X/Y เพื่อไม่ให้บิดเบี้ยว
+  const scale = Math.min(rect.width / 960, rect.height / 540);
+  const drawW = Math.round(960 * scale);
+  const drawH = Math.round(540 * scale);
+
   const dpr = window.devicePixelRatio || 1;
-  // เต็มจอเสมอ (stretch to fill — ภาพเต็มจอตามที่ต้องการ)
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
-  canvas.style.width = rect.width + 'px';
-  canvas.style.height = rect.height + 'px';
+  canvas.width = drawW * dpr;
+  canvas.height = drawH * dpr;
+  canvas.style.width = drawW + 'px';
+  canvas.style.height = drawH + 'px';
   canvas.style.position = 'absolute';
-  canvas.style.left = '0';
-  canvas.style.top = '0';
+  // จัดกลางจอ
+  canvas.style.left = Math.round((rect.width - drawW) / 2) + 'px';
+  canvas.style.top = Math.round((rect.height - drawH) / 2) + 'px';
 
-  // Scale for rendering: logical → actual pixel
-  state.scaleX = canvas.width / 960;
-  state.scaleY = canvas.height / 540;
+  // Scale เดียวกันทั้งสองแกน (ไม่บิดเบี้ยว)
+  state.scaleX = (drawW * dpr) / 960;
+  state.scaleY = state.scaleX;
 
-  // Particles canvas — ขนาดเท่า container
+  // Particles canvas — ขนาดเท่า game canvas
   const pCanvas = state.pCanvas;
   if (pCanvas) {
     pCanvas.width = canvas.width;
     pCanvas.height = canvas.height;
-    pCanvas.style.width = rect.width + 'px';
-    pCanvas.style.height = rect.height + 'px';
+    pCanvas.style.width = drawW + 'px';
+    pCanvas.style.height = drawH + 'px';
     pCanvas.style.position = 'absolute';
-    pCanvas.style.left = '0';
-    pCanvas.style.top = '0';
+    pCanvas.style.left = canvas.style.left;
+    pCanvas.style.top = canvas.style.top;
   }
+
+  // เก็บ offset ของ canvas ภายใต้ container (สำหรับแสดงพิกัด HUD/particles)
+  state.canvasOffsetX = (rect.width - drawW) / 2;
+  state.canvasOffsetY = (rect.height - drawH) / 2;
 }
 
 // ============================================================
