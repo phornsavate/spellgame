@@ -1768,27 +1768,36 @@ function resizeCanvas() {
 
   const rect = container.getBoundingClientRect();
 
-  // Logical resolution (game world — landscape 16:9)
+  // Logical game resolution (960×540 coordinate space)
   state.canvasW = 960;
   state.canvasH = 540;
 
-  // Uniform scale — รักษาสัดส่วน ไม่ให้ตัวละครบิดเบี้ยว
-  const scale = Math.min(rect.width / state.canvasW, rect.height / state.canvasH);
-
-  const displayW = Math.round(state.canvasW * scale);
-  const displayH = Math.round(state.canvasH * scale);
-
-  // Canvas pixel buffer = logical size (CSS handles display scaling)
-  canvas.width = state.canvasW;
-  canvas.height = state.canvasH;
-  canvas.style.width = displayW + 'px';
-  canvas.style.height = displayH + 'px';
+  // Canvas fills container exactly (no aspect-ratio lock)
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
   canvas.style.position = 'absolute';
-  canvas.style.left = Math.round((rect.width - displayW) / 2) + 'px';
-  canvas.style.top = Math.round((rect.height - displayH) / 2) + 'px';
+  canvas.style.left = '0';
+  canvas.style.top = '0';
 
-  // Input coordinate conversion: screen → logical
-  state.displayScale = state.canvasW / displayW;
+  // Scale for rendering: logical → actual pixel
+  state.scaleX = canvas.width / state.canvasW;
+  state.scaleY = canvas.height / state.canvasH;
+
+  // Scale for input: screen css px → logical
+  state.inputScaleX = rect.width / state.canvasW;
+  state.inputScaleY = rect.height / state.canvasH;
+
+  // Particles canvas — same pixel dims, fills container
+  const pCanvas = state.pCanvas;
+  if (pCanvas) {
+    pCanvas.width = canvas.width;
+    pCanvas.height = canvas.height;
+    pCanvas.style.width = rect.width + 'px';
+    pCanvas.style.height = rect.height + 'px';
+  }
 }
 
 // ============================================================
