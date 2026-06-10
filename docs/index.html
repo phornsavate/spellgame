@@ -367,6 +367,22 @@ html, body {
       </div>
     </div>
 
+    <!-- TUTORIAL OVERLAY (แสดงเมื่อเริ่มเกม) -->
+    <div id="tutorial-overlay" class="overlay" style="display:none;">
+      <div class="overlay-card" style="max-width:420px;">
+        <div style="font-size:48px;margin-bottom:8px;">🎮</div>
+        <h2 style="font-size:20px;margin-bottom:8px;">วิธีเล่น</h2>
+        <div style="text-align:left;font-size:15px;line-height:1.8;background:#FFF8E1;border-radius:12px;padding:12px 18px;">
+          <p>⬅➡ <b>ลูกศรซ้าย/ขวา</b> หรือ <b>A/D</b> = เลื่อน</p>
+          <p>⬆ <b>ลูกศรขึ้น</b> หรือ <b>Space</b> = กระโดด</p>
+          <p>🍄 เก็บเห็ด = ตอบคำถามภาษาไทย</p>
+          <p>⚠ ข้ามหลุม = กระโดด! (กด ⬆ หรือ Space)</p>
+          <p>❤️ ตกหลุมเสียหัวใจ ระวังด้วย!</p>
+        </div>
+        <button id="tutorial-ok-btn" class="btn-primary" style="margin-top:12px;">✅ เข้าใจแล้ว!</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -423,9 +439,9 @@ const CONFIG = {
   GROUND_HEIGHT: 40,
   TILE: 32,
   GRAVITY: 0.55,
-  JUMP_VEL: -10.5,
-  MOVE_SPEED: 4.5,
-  MAX_FALL: 12,
+  JUMP_VEL: -11.5,
+  MOVE_SPEED: 5,
+  MAX_FALL: 13,
   PLAYER_W: 28,
   PLAYER_H: 42,
 
@@ -434,6 +450,8 @@ const CONFIG = {
 
   // Question mushrooms
   MUSHROOM_W: 30,
+  // Tutorial
+  SHOW_TUTORIAL: true,
   MUSHROOM_H: 36,
   TOTAL_QUESTIONS: 20,
 };
@@ -723,17 +741,17 @@ const LEVEL = {
   // ---- ชานชาลาลอยฟ้า (platforms) ----
   LEVEL.platforms.push(
     {x: 350, y: 390, w: 130, h: 18},
-    {x: 700, y: 380, w: 100, h: 18},
+    {x: 700, y: 370, w: 100, h: 18},
     {x: 1100, y: 400, w: 120, h: 18},
     {x: 1400, y: 370, w: 110, h: 18},
     {x: 1700, y: 390, w: 130, h: 18},
-    {x: 1950, y: 350, w: 100, h: 18},
+    // platform ที่ x=1950 ถูกลบออก มันบังทางข้ามหลุม!
     {x: 2300, y: 380, w: 120, h: 18},
-    {x: 2600, y: 360, w: 130, h: 18},
+    {x: 2600, y: 380, w: 130, h: 18},  // ลดลงมาอยู่ที่ y=380 (ถึงจากพื้นได้)
     {x: 2900, y: 400, w: 100, h: 18},
     {x: 3250, y: 370, w: 120, h: 18},
     {x: 3550, y: 390, w: 110, h: 18},
-    {x: 3850, y: 355, w: 130, h: 18},
+    {x: 3850, y: 380, w: 130, h: 18},  // ลดลงมาอยู่ที่ y=380
     {x: 4200, y: 380, w: 120, h: 18},
     {x: 4500, y: 360, w: 110, h: 18},
     {x: 4800, y: 385, w: 130, h: 18},
@@ -753,12 +771,12 @@ const LEVEL = {
     {x: 1900, y: GY - CONFIG.MUSHROOM_H},          // 9
     {x: 2150, y: GY - CONFIG.MUSHROOM_H},          // 10
     {x: 2400, y: 380 - CONFIG.MUSHROOM_H},         // 11
-    {x: 2700, y: 360 - CONFIG.MUSHROOM_H},         // 12
+    {x: 2650, y: 380 - CONFIG.MUSHROOM_H},         // 12 (ย้ายลงมา y=380)
     {x: 2950, y: 400 - CONFIG.MUSHROOM_H},         // 13
     {x: 3150, y: GY - CONFIG.MUSHROOM_H},          // 14
     {x: 3400, y: 370 - CONFIG.MUSHROOM_H},         // 15
     {x: 3650, y: 390 - CONFIG.MUSHROOM_H},         // 16
-    {x: 3900, y: 355 - CONFIG.MUSHROOM_H},         // 17
+    {x: 3900, y: 380 - CONFIG.MUSHROOM_H},         // 17 (ย้ายลงมา y=380)
     {x: 4150, y: GY - CONFIG.MUSHROOM_H},          // 18
     {x: 4400, y: 380 - CONFIG.MUSHROOM_H},         // 19
     {x: 4700, y: GY - CONFIG.MUSHROOM_H},          // 20
@@ -1541,11 +1559,12 @@ function render() {
     ctx.fillStyle = '#5D4037';
     ctx.fillRect(px - 2, CONFIG.GROUND_Y, 4, CONFIG.GROUND_HEIGHT);
     ctx.fillRect(px + pit.w - 2, CONFIG.GROUND_Y, 4, CONFIG.GROUND_HEIGHT);
-    // คำเตือน 危险
-    ctx.fillStyle = 'rgba(255,0,0,0.3)';
-    ctx.font = 'bold 14px sans-serif';
+    // คำเตือน หลุม
+    ctx.fillStyle = '#FF5722';
+    ctx.font = 'bold 28px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('⚠', px + pit.w / 2, CONFIG.GROUND_Y + 12);
+    const bounce = Math.sin(Date.now() / 200) * 3;
+    ctx.fillText('⬆', px + pit.w / 2, CONFIG.GROUND_Y - 12 + bounce);
   }
 
   // ---- Platforms ----
@@ -1786,6 +1805,12 @@ function startGame() {
 
   // Start game loop
   gameLoop();
+
+  // แสดง Tutorial (pause game)
+  if (CONFIG.SHOW_TUTORIAL) {
+    state.phase = 'tutorial';
+    document.getElementById('tutorial-overlay').style.display = 'flex';
+  }
 }
 
 // ---- Retry & Play Again ----
@@ -1801,6 +1826,15 @@ document.getElementById('playagain-btn').addEventListener('click', () => {
   document.getElementById('start-overlay').style.display = 'flex';
   document.getElementById('game-wrapper').style.display = 'none';
   state.phase = 'start';
+});
+
+// ---- Tutorial Dismiss ----
+document.getElementById('tutorial-ok-btn').addEventListener('click', () => {
+  document.getElementById('tutorial-overlay').style.display = 'none';
+  state.phase = 'playing';
+  state.keys.left = false;
+  state.keys.right = false;
+  state.keys.jump = false;
 });
 
 // ---- Window Resize ----
