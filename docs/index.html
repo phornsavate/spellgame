@@ -37,8 +37,8 @@ html, body {
   overflow: hidden;
 }
 
-/* แนวนอน: แสดงข้อความให้หมุนจอ */
-@media (orientation: landscape) {
+/* แนวนอนบนมือถือ: แสดงข้อความให้หมุนจอ */
+@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
   body { background: #1a1a2e; }
   #game-wrapper { display: none !important; }
   #start-overlay { display: none !important; }
