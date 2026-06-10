@@ -1471,14 +1471,10 @@ function updateHUD() {
 // ============================================================
 function render() {
   const ctx = state.ctx;
-  const cw = state.canvasW;  // 960 (logical)
-  const ch = state.canvasH;  // 540 (logical)
+  const cw = state.canvasW;
+  const ch = state.canvasH;
   const cam = state.camera;
   const p = state.player;
-
-  // ---- Scale: 960×540 logical → เต็ม container (portrait/landscape) ----
-  ctx.save();
-  ctx.scale(state.scaleX, state.scaleY);
 
   // ---- Clear ----
   ctx.clearRect(0, 0, cw, ch);
@@ -1657,10 +1653,8 @@ function render() {
     Draw.player(ctx, { x: p.x - cam.x, y: p.y, w: p.w, h: p.h, onGround: p.onGround, vy: p.vy, walkFrame: p.walkFrame, facing: p.facing }, state.avatarEmoji);
   }
 
-  // ---- Particles (viewport coordinates — inside scaled context) ----
+  // ---- Particles (viewport coordinates) ----
   Particles.draw(ctx);
-
-  ctx.restore(); // end scale
 }
 
 // ============================================================
@@ -1774,36 +1768,27 @@ function resizeCanvas() {
 
   const rect = container.getBoundingClientRect();
 
-  // Logical resolution (game world — landscape coordinate space)
+  // Logical resolution (game world — landscape 16:9)
   state.canvasW = 960;
   state.canvasH = 540;
 
-  // Canvas pixel buffer fills container exactly (no aspect-ratio lock)
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
-  canvas.style.width = rect.width + 'px';
-  canvas.style.height = rect.height + 'px';
+  // Uniform scale — รักษาสัดส่วน ไม่ให้ตัวละครบิดเบี้ยว
+  const scale = Math.min(rect.width / state.canvasW, rect.height / state.canvasH);
+
+  const displayW = Math.round(state.canvasW * scale);
+  const displayH = Math.round(state.canvasH * scale);
+
+  // Canvas pixel buffer = logical size (CSS handles display scaling)
+  canvas.width = state.canvasW;
+  canvas.height = state.canvasH;
+  canvas.style.width = displayW + 'px';
+  canvas.style.height = displayH + 'px';
   canvas.style.position = 'absolute';
-  canvas.style.left = '0';
-  canvas.style.top = '0';
+  canvas.style.left = Math.round((rect.width - displayW) / 2) + 'px';
+  canvas.style.top = Math.round((rect.height - displayH) / 2) + 'px';
 
-  // Scale factor: maps 960×540 logical space → actual canvas pixels
-  state.scaleX = canvas.width / state.canvasW;
-  state.scaleY = canvas.height / state.canvasH;
-
-  // Input conversion: screen coords → logical coords
-  state.inputScaleX = rect.width / state.canvasW;
-  state.inputScaleY = rect.height / state.canvasH;
-
-  // Particles canvas — same pixel dimensions, fills container
-  const pCanvas = state.pCanvas;
-  if (pCanvas) {
-    pCanvas.width = canvas.width;
-    pCanvas.height = canvas.height;
-    pCanvas.style.width = rect.width + 'px';
-    pCanvas.style.height = rect.height + 'px';
-  }
+  // Input coordinate conversion: screen → logical
+  state.displayScale = state.canvasW / displayW;
 }
 
 // ============================================================
