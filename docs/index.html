@@ -32,16 +32,30 @@ html, body {
 }
 #game-container {
   position: relative;
-  width: min(100vw, calc(100vh * 16/9));
-  height: min(100vh, calc(100vw * 9/16));
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 0 40px rgba(255,165,0,0.3);
+}
+
+/* Landscape mode: 16:9 จอไวด์ */
+@media (orientation: landscape) {
+  #game-container {
+    width: min(100vw, calc(100vh * 16/9));
+    height: min(100vh, calc(100vw * 9/16));
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(255,165,0,0.3);
+  }
+}
+
+/* Portrait mode (มือถือแนวตั้ง): เต็มจอ */
+@media (orientation: portrait) {
+  #game-container {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 #gameCanvas {
   display: block;
-  width: 100%;
-  height: 100%;
   background: #87CEEB;
 }
 
@@ -290,6 +304,30 @@ html, body {
   #hud-score { font-size: 12px; }
   .mctrl-btn { width: 48px; height: 48px; font-size: 20px; }
   .mctrl-btn.jump-btn { width: 60px; height: 60px; }
+}
+
+/* Portrait mode: ปุ่มควบคุมอยู่ล่างสุด ขนาดใหญ่ขึ้น */
+@media (orientation: portrait) {
+  #mobile-controls {
+    bottom: 0;
+    padding: 4px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: linear-gradient(0deg, rgba(0,0,0,0.25) 0%, transparent 100%);
+  }
+  .mctrl-btn {
+    width: 64px; height: 64px;
+    font-size: 26px;
+  }
+  .mctrl-btn.jump-btn {
+    width: 80px; height: 80px;
+    font-size: 24px;
+  }
+  .mctrl-group { gap: 14px; }
+  .overlay-card { max-width: 92vw; padding: 18px 14px; }
+  .overlay-card h1 { font-size: 20px; }
+  #hud { padding: 6px 8px; gap: 6px; }
+  #hud-name { font-size: 11px; min-width: 30px; }
+  #hud-hearts { font-size: 14px; }
+  #hud-score { font-size: 11px; }
 }
 </style>
 </head>
@@ -1730,9 +1768,50 @@ function setupMobileControls() {
 function resizeCanvas() {
   const container = document.getElementById('game-container');
   const canvas = state.canvas;
+  if (!container || !canvas) return;
   const rect = container.getBoundingClientRect();
+
+  // Logical resolution (game world)
+  state.canvasW = 960;
+  state.canvasH = 540;
+
+  // Set canvas pixel buffer to logical size (CSS handles display scaling)
   canvas.width = state.canvasW;
   canvas.height = state.canvasH;
+
+  // คำนวณ display size ให้คงสัดส่วน 16:9 ไม่บิดเบี้ยว
+  const gameRatio = state.canvasW / state.canvasH; // 16/9
+  const containerRatio = rect.width / rect.height;
+
+  let displayW, displayH;
+  if (containerRatio > gameRatio) {
+    // Container กว้างกว่า → จอแนวนอน → เต็มความสูง
+    displayH = rect.height;
+    displayW = displayH * gameRatio;
+  } else {
+    // Container สูงกว่า → จอแนวตั้ง → เต็มความกว้าง
+    displayW = rect.width;
+    displayH = displayW / gameRatio;
+  }
+
+  // จัดกึ่งกลาง canvas ใน container เพื่อคงสัดส่วน
+  canvas.style.width = displayW + 'px';
+  canvas.style.height = displayH + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left = ((rect.width - displayW) / 2) + 'px';
+  canvas.style.top = ((rect.height - displayH) / 2) + 'px';
+
+  // เก็บ scale สำหรับคำนวณ touch/mouse coordinates
+  state.displayScale = state.canvasW / displayW;
+
+  // ปรับ particles canvas ให้เต็ม container (ไม่เปลี่ยนสัดส่วน)
+  const pCanvas = state.pCanvas;
+  if (pCanvas) {
+    pCanvas.width = rect.width;
+    pCanvas.height = rect.height;
+    pCanvas.style.width = rect.width + 'px';
+    pCanvas.style.height = rect.height + 'px';
+  }
 }
 
 // ============================================================
@@ -1837,8 +1916,11 @@ document.getElementById('tutorial-ok-btn').addEventListener('click', () => {
   state.keys.jump = false;
 });
 
-// ---- Window Resize ----
+// ---- Window Resize & Orientation ----
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => {
+  setTimeout(resizeCanvas, 300); // รอให้เบราว์เซอร์ปรับ layout ก่อน
+});
 
 console.log('🍄 ผจญภัยหุบเขาสะกดคำ — Game Loaded!');
 </script>
